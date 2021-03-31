@@ -1,5 +1,5 @@
-# Vagrantfile: Docker Swarm with Docker running inside CentOS 7 boxes
+# Vagrantfile: A Docker Swarm inside CentOS 7 boxes
 
-An easy way to get an operationnal Docker Swarm in no time ;)
+An easy way to get an operational Docker Swarm in no time ;)
 
-Please note, this Vagrantfile uses VirtualBox as provider.
+Please note, this Vagrant project uses VirtualBox as provider.
