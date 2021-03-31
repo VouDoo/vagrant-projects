@@ -6,7 +6,7 @@
 #
 # DESCRIPTION
 # ~~~~~~~~~~~
-# Deploy a Docker swarm with a manager and workers
+# Deploy a Docker swarm with a manager and some workers
 #
 # NOTES
 # ~~~~~
@@ -18,8 +18,8 @@
 # Use the following command to spin up the boxes:
 #   vagrant up
 #
-# PARAMTERS
-# ~~~~~~~~~
+# PARAMETERS
+# ~~~~~~~~~~
 # Define virtual machines' resources
 # Number of CPUs per machine
 vm_cpus = 1
@@ -34,6 +34,7 @@ manager_instance_ip = "#{prefix_ip}.100"
 # Define number of Docker Swarm worker instances
 # Keep in mind that the Docker Swarm manager is a worker as well so containers will run on it.
 worker_instances_count = 2
+
 
 # Initialize Docker Swarm instances
 instances = []
