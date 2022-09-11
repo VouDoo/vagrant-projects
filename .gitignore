@@ -1,9 +1,12 @@
 ### Vagrant ###
 # General
-.vagrant/
+**/.vagrant/
 
 # Log files (if you are creating logs in debug mode, uncomment this)
-# *.log
+*.log
 
 ### Vagrant Patch ###
 *.box
+
+### Exclude local projects (starting with 2 underscores) ###
+**/projects/__*/

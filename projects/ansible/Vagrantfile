@@ -1,0 +1,118 @@
+#!/usr/bin/ruby
+# -*- mode: ruby -*-
+
+
+# Vagrantfile
+#
+# DESCRIPTION
+# ~~~~~~~~~~~
+# Deploy a Ansible controller and a bench of node machines (client hosts)
+# Jenkins can be used to run the Ansible playbooks
+#
+# NOTES
+# ~~~~~
+# This Vagrantfile uses VirtualBox as provider
+# Make sure that VirtualBox is installed on your machine
+# To install it, please visit the official Website:
+#   https://www.virtualbox.org/wiki/Downloads
+#
+# Use the following command to spin up the boxes:
+#   vagrant up
+#
+# PARAMETERS
+# ~~~~~~~~~~
+# Define network for the virtual machines' private network
+# Use only CIDR length /24 for the prefix IPv4
+prefix_ip = "192.168.26"
+# Define master virtual machine's resources
+# Number of CPUs
+master_instance_cpus = 1
+# Allocated RAM
+master_instance_memory = 1024
+# Define master IPv4
+# It is strongly recommended to leave it by default
+master_instance_ip = "#{prefix_ip}.100"
+# Define slave virtual machines' resources
+# Number of CPUs per machine
+slave_instances_cpus = 1
+# Allocated RAM per machine
+slave_instances_memory = 512
+# Define number of slave instances (client machines)
+slave_instances_count = 2
+
+
+# Initialize instances
+instances = []
+# Push master node
+instances.push(
+  {
+    :name => "master",
+    :ip => master_instance_ip,
+    :cpus => master_instance_cpus,
+    :memory => master_instance_memory,
+    :type => "m" # As master
+  }
+)
+# Push slave nodes
+(1..slave_instances_count).each do |c|
+  instances.push(
+    {
+      :name => "slave#{c}",
+      :ip => "#{prefix_ip}.#{100 + c}",
+      :cpus => 1,
+      :memory => 512,
+      :type => "s" # As slave
+    }
+  )
+end
+
+Vagrant.configure("2") do |config|
+  # Get vagrant user's public key from file
+  vagrant_user_pub_key = File.read("files/id_rsa.pub")
+  # Provision instances
+  instances.each do |instance|
+    config.vm.define instance[:name] do |i|
+      i.vm.box = "centos/7"
+      i.vm.hostname = instance[:name]
+      i.vm.network :private_network, ip: "#{instance[:ip]}"
+      i.vm.provider :virtualbox do |v|
+        v.name = instance[:name]
+        v.cpus = instance[:cpus]
+        v.memory = instance[:memory]
+        v.customize ["modifyvm", :id, "--groups", "/ansible-jenkins-sandbox"]
+      end
+      # Populate hosts file
+      instances.each do |instance|
+        i.vm.provision "shell", inline: "echo '#{instance[:ip]} #{instance[:name]}' >> /etc/hosts"
+      end
+      i.vm.provision "shell", path: "../_common_scripts/centos/7/_init.sh"
+      if instance[:type] == "m" # for master node
+        # Import pair of SSH keys for vagrant user
+        i.vm.provision "file", source: "files/id_rsa", destination: "/home/vagrant/.ssh/id_rsa"
+        i.vm.provision "file", source: "files/id_rsa.pub", destination: "/home/vagrant/.ssh/id_rsa.pub"
+        i.vm.provision "shell", inline: "chmod 600 /home/vagrant/.ssh/id_rsa && chmod 644 /home/vagrant/.ssh/id_rsa.pub"
+        # Install Ansible
+        i.vm.provision "shell", path: "../_common_scripts/centos/7/install_ansible.sh"
+        # Add slave hostnames in Ansible hosts file
+        i.vm.provision "shell", inline: "echo -e '\n# Sandbox hosts\n[sandbox]' >> /etc/ansible/hosts"
+        instances.each do |instance|
+          if instance[:type] == "s"
+            i.vm.provision "shell", inline: "echo '#{instance[:name]}' >> /etc/ansible/hosts"
+          end
+        end
+        # Install WGet
+        i.vm.provision "shell", path: "./scripts/install_wget.sh"
+        # Install Jenkins (including Jenkins Ansible plugin)
+        i.vm.provision "shell", path: "../_common_scripts/centos/7/install_jenkins.sh"
+        i.vm.provision "shell", path: "./scripts/install_jenkins_plugins.sh"
+        # Add firewall service for Jenkins
+        i.vm.provision "shell", path: "./scripts/firewalld.sh"
+        # Forward port 8080 for Jenkins web interface
+        i.vm.network :forwarded_port, guest: 8080, host: 18080
+      elsif instance[:type] == "s" # for slave node
+        # Append vagrant user's public key in authorized_keys file
+        i.vm.provision "shell", inline: "echo '#{vagrant_user_pub_key}' >> /home/vagrant/.ssh/authorized_keys"
+      end
+    end
+  end
+end

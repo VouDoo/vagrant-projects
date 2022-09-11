@@ -77,10 +77,9 @@ Vagrant.configure("2") do |config|
       instances.each do |instance|
         i.vm.provision "shell", inline: "echo '#{instance[:ip]} #{instance[:name]}' >> /etc/hosts"
       end
-      # Set SSH password authentication to "yes"
-      i.vm.provision "shell", path: "scripts/allowSSHPasswordAuth.sh"
+      i.vm.provision "shell", path: "../_common_scripts/centos/7/_init.sh"
       # Install Docker CE package
-      i.vm.provision "shell", path: "scripts/installDockerCE.sh"
+      i.vm.provision "shell", path: "../_common_scripts/centos/7/install_docker.sh"
       if instance[:type] == "m" # for Manager node
         # Initialize Docker swarm
         i.vm.provision "shell", inline: "docker swarm init --advertise-addr #{instance[:ip]}"
