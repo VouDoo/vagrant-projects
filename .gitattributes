@@ -1,1 +1,2 @@
-*.sh linguist-vendored=true eol=lf
+*               text    eol=lf linguist-vendored=true
+Vagrantfile     text    eol=lf linguist-vendored=false
